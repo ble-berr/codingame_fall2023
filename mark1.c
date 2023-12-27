@@ -1,6 +1,6 @@
 /*
  * - single drone
- * - chase closest unscanned fish
+ * - chase closest visible unscanned fish
  * - never light up
  */
 #include <stdlib.h>
