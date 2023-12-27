@@ -218,7 +218,7 @@ int main()
 			continue;
 		}
 
-		enum direction direction = TR;
+		enum direction direction = NO_DIRECTION;
 
 		for (int i = 0; i < my_drone->blip_count; i++) {
 			int creature_id = my_drone->blips[i].creature_id;
