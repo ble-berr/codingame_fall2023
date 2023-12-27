@@ -253,7 +253,7 @@ static void play_drone(struct drone *drone, bool inverse_priority) {
 		return;
 	}
 
-	if (6 <= drone->scan_count) {
+	if (7 <= drone->scan_count) {
 		dbg("drone %d delivering scans\n", ENTITY_ID(drone));
 		printf("MOVE %d 0 %d\n", drone->x, light);
 		return;
@@ -270,7 +270,7 @@ static void play_drone(struct drone *drone, bool inverse_priority) {
 
 		if (!target ||
 				(fish->type < target->type || inverse_priority) ||
-				fish_direction < target_direction) {
+				(target_direction < fish_direction || inverse_priority) ) {
 			target = fish;
 			target_direction = fish_direction;
 			continue;
