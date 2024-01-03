@@ -547,7 +547,7 @@ static void play_drone(struct drone *drone) {
 		vector_drone_scores[i] += compute_weighted_value(drone_pos, vectors[i], -1, other_drone_pos);
 	}
 
-#if 0
+#if 1
 	{
 		char buf[256];
 		int buf_len;
