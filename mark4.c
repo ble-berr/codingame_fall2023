@@ -1,7 +1,7 @@
 /*
  * Bronze League
  *
- * Goes through a preset route
+ * Selects the "best" direction for each drone from a fixed set of possible directions.
  */
 #include <stdlib.h>
 #include <stdio.h>
