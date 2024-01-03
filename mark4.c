@@ -109,9 +109,6 @@ struct drone {
 	int scan_count;
 	int scans[FISH_COUNT];
 	enum drone_state state;
-	int route_step;
-	int route_start_x;
-	int route_start_y;
 };
 
 union entity {
