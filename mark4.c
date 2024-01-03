@@ -77,6 +77,7 @@ struct fish {
 	int vx;       /* [0, 10000[ ? */
 	int vy;       /* [0, 10000[ ? */
 	bool visible;
+	bool unavailable;
 };
 
 enum direction {
@@ -499,18 +500,11 @@ static void play_drone(struct drone *drone) {
 
 	for (int ent_id = TOTAL_DRONE_COUNT; ent_id < state.entity_count; ent_id++) {
 		struct fish *fish = &state.entities[ent_id].fish;
-		if (fish->type == -1 || is_scanned(drone, ent_id)) { continue; }
+		if (fish->type == -1 || fish->unavailable || is_scanned(drone, ent_id)) { continue; }
 
 		int fish_value = compute_fish_value(fish);
 
-		struct vec2d fish_pos;
-
-		if (fish->visible) {
-			fish_pos.x = fish->x + fish->vx;
-			fish_pos.y = fish->y + fish->vy;
-		} else {
-			fish_pos = fish_pos_from_radar(drone, fish);
-		}
+		struct vec2d fish_pos = { fish->x + fish->vx, fish->y + fish->vy };
 
 		if (is_scanned(other_drone, ent_id) || vec2d_distance(other_drone_pos, fish_pos) < vec2d_distance(drone_pos, fish_pos)) {
 			fish_value /= 2;
@@ -582,6 +576,56 @@ static void play_drone(struct drone *drone) {
 	submit_drone_move(drone_pos.x, drone_pos.y, light, "");
 }
 
+static void guess_fish_positions(void) {
+	struct drone *drone_a = &state.entities[state.my.drones[0]].drone;
+	struct drone *drone_b = &state.entities[state.my.drones[1]].drone;
+	assert(drone_a->blip_count == drone_b->blip_count, "blip count mismatch\n");
+
+	for (int fish_id = TOTAL_DRONE_COUNT; fish_id < state.entity_count; fish_id++) {
+		struct fish *fish = &state.entities[fish_id].fish;
+		if (fish->type == -1 || fish->visible) { continue; }
+
+		enum direction *dir_a = NULL;
+		enum direction *dir_b = NULL;
+
+		for (int i = 0; i < drone_a->blip_count; i++) {
+			if (drone_a->blips[i].creature_id == fish_id) { dir_a = &drone_a->blips[i].direction; }
+			if (drone_b->blips[i].creature_id == fish_id) { dir_b = &drone_b->blips[i].direction; }
+		}
+		assert((!dir_a && !dir_b) || (dir_a && dir_b), "blip mismatch\n");
+		if (!dir_a) {
+			fish->unavailable = true;
+			continue;
+		}
+
+		int const top_hab_lim[] = { 2500, 5000, 7500 };
+		int const bot_hab_lim[] = { 5000, 7500, 10000 };
+		int left_x = 0;
+		int right_x = MAX_X;
+		int top_y = top_hab_lim[fish->type];
+		int bottom_y = bot_hab_lim[fish->type];
+
+		switch (*dir_a) {
+			case BL: right_x = MIN(right_x, drone_a->x); top_y    = MAX(top_y,    drone_a->y); break;
+			case TL: right_x = MIN(right_x, drone_a->x); bottom_y = MAX(bottom_y, drone_a->y); break;
+			case BR: left_x  = MIN(left_x,  drone_a->x); top_y    = MAX(top_y,    drone_a->y); break;
+			case TR: left_x  = MIN(left_x,  drone_a->x); bottom_y = MAX(bottom_y, drone_a->y); break;
+		}
+
+		switch (*dir_b) {
+			case BL: right_x = MIN(right_x, drone_b->x); top_y    = MAX(top_y,    drone_b->y); break;
+			case TL: right_x = MIN(right_x, drone_b->x); bottom_y = MAX(bottom_y, drone_b->y); break;
+			case BR: left_x  = MIN(left_x,  drone_b->x); top_y    = MAX(top_y,    drone_b->y); break;
+			case TR: left_x  = MIN(left_x,  drone_b->x); bottom_y = MAX(bottom_y, drone_b->y); break;
+		}
+
+		fish->x = (left_x + right_x) / 2;
+		fish->y = (top_y + bottom_y) / 2;
+		fish->vx = 0;
+		fish->vy = 0;
+	}
+}
+
 int main()
 {
 	int creature_count;
@@ -599,6 +643,7 @@ int main()
 
 	while (1) {
 		parse_round_input();
+		guess_fish_positions();
 
 		play_drone(&state.entities[state.my.drones[0]].drone);
 		play_drone(&state.entities[state.my.drones[1]].drone);
