@@ -523,6 +523,28 @@ static void play_drone(struct drone *drone) {
 		vector_scores[i] += (int)((float)drone_scans_value * factor);
 	}
 
+#ifdef DEBUG_BUILD
+	{
+		char buf[256] = { '{' };
+		int buf_len = 1;
+		for (int i = 0; i < vector_count; i++) {
+			int len = snprintf(buf + buf_len, ARRLEN(buf) - buf_len, "%d,%d: %d", vectors[i].x, vectors[i].y, vector_scores[i]);
+			assert(0 < len && len <= ARRLEN(buf) - buf_len, "buffer overflow line %d\n", __LINE__);
+			buf_len += len;
+			if (i < vector_count) {
+				assert(buf_len < ARRLEN(buf) - 2, "buffer overflow line %d\n", __LINE__);
+				buf[buf_len] = ',';
+				buf[buf_len + 1] = ' ';
+				buf_len += 2;
+			}
+		}
+		assert(buf_len < ARRLEN(buf) - 2, "buffer overflow line %d\n", __LINE__);
+		buf[buf_len] = '}';
+		buf[buf_len + 1] = 0;
+		dbg("D%d %s\n", ENTITY_ID(drone), buf);
+	}
+#endif
+
 	int best_vector_score = vector_scores[0];
 	int best_vector = 0;
 	for (int i = 1; i < vector_count; i++) {
