@@ -395,55 +395,6 @@ static bool fish_will_scan(struct drone *drone, struct vec2d drone_vec, struct f
 	return false;
 }
 
-static struct vec2d fish_pos_from_radar(struct drone *drone, struct fish *fish) {
-	struct vec2d fish_pos;
-
-	int top;
-	int bottom;
-
-	switch (fish->type) {
-		case 0:
-			top = 2500;
-			bottom = 5000;
-			break;
-		case 1:
-			top = 5000;
-			bottom = 7500;
-			break;
-		case 2:
-			top = 7500;
-			bottom = 10000;
-			break;
-		default: assert(false, "unreachable statement at line %d\n", __LINE__);
-	}
-
-	for (int i = 0; i < drone->blip_count; i++) {
-		if (drone->blips[i].creature_id != ENTITY_ID(fish)) { continue; }
-		switch (drone->blips[i].direction) {
-			case BR:
-				fish_pos.x = 9999;
-				fish_pos.y = bottom - ((bottom - MAX(drone->y, top)) / 2);
-				break;
-			case TR:
-				fish_pos.x = 9999;
-				fish_pos.y = top + ((top - MIN(drone->y, bottom)) / 2);
-				break;
-			case BL:
-				fish_pos.x = 0;
-				fish_pos.y = bottom - ((bottom - MAX(drone->y, top)) / 2);
-				break;
-			case TL:
-				fish_pos.x = 0;
-				fish_pos.y = top + ((top - MIN(drone->y, bottom)) / 2);
-				break;
-			default: assert(false, "unreachable statement at line %d\n", __LINE__);
-		}
-		break;
-	}
-
-	return fish_pos;
-}
-
 static int compute_weighted_value(struct vec2d drone_pos, struct vec2d drone_vector, int fish_value, struct vec2d fish_pos) {
 	int initial_distance = vec2d_distance(drone_pos, fish_pos);
 	drone_vector.x += drone_pos.x;
