@@ -109,6 +109,7 @@ struct drone {
 	int scan_count;
 	int scans[FISH_COUNT];
 	enum drone_state state;
+	int turns_since_light;
 };
 
 union entity {
@@ -225,6 +226,7 @@ static void parse_round_input(void) {
 		drone->battery = battery;
 		drone->scan_count = 0;
 		drone->blip_count = 0;
+		drone->turns_since_light += 1;
 	}
 	int drone_scan_count;
 	scanf("%d", &drone_scan_count);
@@ -454,7 +456,12 @@ static int compute_weighted_value(struct vec2d drone_pos, struct vec2d drone_vec
 }
 
 static void play_drone(struct drone *drone) {
-	const int light = (drone->battery == DRONE_BATTERY_MAX);
+	const int light = (drone->y > 2000 && (drone->battery == DRONE_BATTERY_MAX || 4 <= drone->turns_since_light));
+	if (light) {
+		drone->turns_since_light = 0;
+	} else {
+		drone->turns_since_light += 1;
+	}
 
 	int other_drone_id = (state.my.drones[0] == ENTITY_ID(drone)) ? state.my.drones[1] : state.my.drones[0];
 	struct drone *other_drone = &state.entities[other_drone_id].drone;
