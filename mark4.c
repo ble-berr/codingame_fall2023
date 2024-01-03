@@ -367,13 +367,6 @@ static bool monster_collision(struct drone *drone, struct vec2d vector) {
 			};
 
 			if (vec2d_distance(drone_snapshot, monster_snapshot) <= MONSTER_COLLISION_DISTANCE) {
-#if 0
-				dbg(
-					"M%d @{%d,%d} v{%d,%d} D%d v{%d,%d} collision YES\n",
-					id, fish->x, fish->y, fish->vx, fish->vy,
-					ENTITY_ID(drone), vector.x, vector.y,
-				);
-#endif
 				return true;
 			}
 		}
@@ -460,7 +453,6 @@ static int compute_weighted_value(struct vec2d drone_pos, struct vec2d drone_vec
 	double factor = 1.0 - ((double)final_distance / (double)initial_distance);
 	int weighted_value = (double)fish_value * factor;
 
-	dbg("value:%d weight:%f result:%d\n", fish_value, factor, weighted_value);
 	return weighted_value;
 }
 
