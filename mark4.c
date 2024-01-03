@@ -467,6 +467,7 @@ static void play_drone(struct drone *drone) {
 	struct drone *other_drone = &state.entities[other_drone_id].drone;
 
 	struct vec2d drone_pos = { drone->x, drone->y };
+	struct vec2d other_drone_pos = { other_drone->x, other_drone->y };
 	struct vec2d candidate_vectors[] = {
 		{ 600, 0 },
 		{ 425, 425},
@@ -501,25 +502,26 @@ static void play_drone(struct drone *drone) {
 		if (fish->type == -1 || is_scanned(drone, ent_id)) { continue; }
 
 		int fish_value = compute_fish_value(fish);
-		if (is_scanned(other_drone, ent_id)) { fish_value /= 2; }
+
+		struct vec2d fish_pos;
+
+		if (fish->visible) {
+			fish_pos.x = fish->x + fish->vx;
+			fish_pos.y = fish->y + fish->vy;
+		} else {
+			fish_pos = fish_pos_from_radar(drone, fish);
+		}
+
+		if (is_scanned(other_drone, ent_id) || vec2d_distance(other_drone_pos, fish_pos) < vec2d_distance(drone_pos, fish_pos)) {
+			fish_value /= 2;
+		}
 
 		for (int i = 0; i < vector_count; i++) {
-			struct vec2d *vec = vectors + i;
-			if (fish_will_scan(drone, *vec, fish)) {
+			if (fish_will_scan(drone, vectors[i], fish)) {
 				vector_fish_scores[i] += fish_value;
-				continue;
-			}
-
-			struct vec2d fish_pos;
-
-			if (fish->visible) {
-				fish_pos.x = fish->x + fish->vx;
-				fish_pos.y = fish->y + fish->vy;
 			} else {
-				fish_pos = fish_pos_from_radar(drone, fish);
+				vector_fish_scores[i] += compute_weighted_value(drone_pos, vectors[i], fish_value, fish_pos);
 			}
-
-			vector_fish_scores[i] = compute_weighted_value(drone_pos, vectors[i], fish_value, fish_pos);
 		}
 	}
 
@@ -542,7 +544,6 @@ static void play_drone(struct drone *drone) {
 	}
 
 	for (int i = 0; i < vector_count; i++) {
-		struct vec2d other_drone_pos = { other_drone->x, other_drone->y };
 		vector_drone_scores[i] += compute_weighted_value(drone_pos, vectors[i], -1, other_drone_pos);
 	}
 
