@@ -473,7 +473,9 @@ static void play_drone(struct drone *drone) {
 
 	int vector_count = 0;
 	struct vec2d vectors[ARRLEN(candidate_vectors)];
-	int vector_scores[ARRLEN(candidate_vectors)] = {};
+	int vector_fish_scores[ARRLEN(candidate_vectors)] = {};
+	int vector_scan_scores[ARRLEN(candidate_vectors)] = {};
+	int vector_drone_scores[ARRLEN(candidate_vectors)] = {};
 
 	for (int i = 0; i < ARRLEN(candidate_vectors); i++) {
 		if (!monster_collision(drone, candidate_vectors[i])) {
@@ -496,7 +498,7 @@ static void play_drone(struct drone *drone) {
 		for (int i = 0; i < vector_count; i++) {
 			struct vec2d *vec = vectors + i;
 			if (fish_will_scan(drone, *vec, fish)) {
-				vector_scores[i] += fish_value;
+				vector_fish_scores[i] += fish_value;
 				continue;
 			}
 
@@ -509,7 +511,7 @@ static void play_drone(struct drone *drone) {
 				fish_pos = fish_pos_from_radar(drone, fish);
 			}
 
-			vector_scores[i] = compute_weighted_value(drone_pos, vectors[i], fish_value, fish_pos);
+			vector_fish_scores[i] = compute_weighted_value(drone_pos, vectors[i], fish_value, fish_pos);
 		}
 	}
 
@@ -520,42 +522,54 @@ static void play_drone(struct drone *drone) {
 	}
 
 	for (int i = 0; i < vector_count; i++) {
-		struct vec2d save_pos = { drone->x + vectors[i].x, 500 };
-		vector_scores[i] += compute_weighted_value(drone_pos, vectors[i], drone_scans_value, save_pos);
+		if (drone_pos.y <= DRONE_SCAN_SUBMIT_DEPTH) { continue; }
+		int final_y = drone_pos.y + vectors[i].y;
+		if (final_y <= DRONE_SCAN_SUBMIT_DEPTH) { vector_scan_scores[i] += drone_scans_value; }
+
+		int initial_distance = drone_pos.y - DRONE_SCAN_SUBMIT_DEPTH;
+		int final_distance = final_y - DRONE_SCAN_SUBMIT_DEPTH;
+
+		double factor = 1.0 - ((double)final_distance / (double)initial_distance);
+		vector_scan_scores[i] += (int)((double)drone_scans_value * factor);
+	}
+
+	for (int i = 0; i < vector_count; i++) {
+		int other_drone_id = (state.my.drones[0] == ENTITY_ID(drone)) ? state.my.drones[1] : state.my.drones[0];
+		struct drone *other_drone = &state.entities[other_drone_id].drone;
+		struct vec2d other_drone_pos = { other_drone->x, other_drone->y };
+
+		vector_drone_scores[i] += compute_weighted_value(drone_pos, vectors[i], -1, other_drone_pos);
 	}
 
 #if 0
 	{
-		char buf[256] = { '{' };
-		int buf_len = 1;
+		char buf[256];
+		int buf_len;
+
+		buf_len = snprintf(buf, ARRLEN(buf), "D%ld", ENTITY_ID(drone));
 		for (int i = 0; i < vector_count; i++) {
-			int len = snprintf(buf + buf_len, ARRLEN(buf) - buf_len, "%d,%d: %d", vectors[i].x, vectors[i].y, vector_scores[i]);
-			assert(0 < len && len <= ARRLEN(buf) - buf_len, "buffer overflow line %d\n", __LINE__);
-			buf_len += len;
-			if (i < vector_count) {
-				assert(buf_len < ARRLEN(buf) - 2, "buffer overflow line %d\n", __LINE__);
-				buf[buf_len] = ',';
-				buf[buf_len + 1] = ' ';
-				buf_len += 2;
-			}
+			buf_len += snprintf(buf + buf_len, ARRLEN(buf) - buf_len, " {%d,%d}:[%d,%d,%d]%d",
+					vectors[i].x, vectors[i].y,
+					vector_fish_scores[i], vector_scan_scores[i], vector_drone_scores[i],
+					vector_fish_scores[i] + vector_scan_scores[i] + vector_drone_scores[i]
+			);
 		}
-		assert(buf_len < ARRLEN(buf) - 2, "buffer overflow line %d\n", __LINE__);
-		buf[buf_len] = '}';
-		buf[buf_len + 1] = 0;
-		dbg("D%d %s\n", ENTITY_ID(drone), buf);
+		dbg("%s\n", buf);
 	}
 #endif
 
-	int best_vector_score = vector_scores[0];
+	int best_score = vector_fish_scores[0] + vector_scan_scores[0] + vector_drone_scores[0];
 	int best_vector = 0;
 	for (int i = 1; i < vector_count; i++) {
-		if (best_vector_score < vector_scores[i]) {
-			best_vector_score = vector_scores[i];
+		int score = vector_fish_scores[i] + vector_scan_scores[i] + vector_drone_scores[i];
+		if (best_score < score) {
+			best_score = score;
 			best_vector = i;
 		}
 	}
 
-	struct vec2d drone_pos = { drone->x, drone->y };
+	dbg("best is {%d,%d}\n", vectors[best_vector].x, vectors[best_vector].y);
+
 	drone_pos.x += vectors[best_vector].x;
 	drone_pos.y += vectors[best_vector].y;
 
