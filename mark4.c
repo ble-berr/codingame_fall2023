@@ -347,7 +347,7 @@ static int compute_fish_value(struct fish *fish) {
 	fish_value += color_value + type_value;
 
 	assert(fish_value <= MAX_FISH_VALUE, "fish value too high!\n");
-	return fish_value;
+	return fish_value * 100;
 }
 
 static bool monster_collision(struct drone *drone, struct vec2d vector) {
@@ -458,7 +458,7 @@ static int compute_weighted_value(struct vec2d drone_pos, struct vec2d drone_vec
 	int final_distance = vec2d_distance(drone_vector, fish_pos);
 
 	double factor = 1.0 - ((double)final_distance / (double)initial_distance);
-	int weighted_value = ((double)fish_value * 10000.0) * factor;
+	int weighted_value = (double)fish_value * factor;
 
 	dbg("value:%d weight:%f result:%d\n", fish_value, factor, weighted_value);
 	return weighted_value;
@@ -467,6 +467,7 @@ static int compute_weighted_value(struct vec2d drone_pos, struct vec2d drone_vec
 static void play_drone(struct drone *drone) {
 	const int light = (drone->battery == DRONE_BATTERY_MAX);
 
+	struct vec2d drone_pos = { drone->x, drone->y };
 	struct vec2d candidate_vectors[] = {
 		{ 600, 0 },
 		{ 425, 425},
@@ -503,11 +504,10 @@ static void play_drone(struct drone *drone) {
 		for (int i = 0; i < vector_count; i++) {
 			struct vec2d *vec = vectors + i;
 			if (fish_will_scan(drone, *vec, fish)) {
-				vector_scores[i] += fish_value * 10000;
+				vector_scores[i] += fish_value;
 				continue;
 			}
 
-			struct vec2d drone_pos = { drone->x, drone->y };
 			struct vec2d fish_pos;
 
 			if (fish->visible) {
@@ -528,12 +528,11 @@ static void play_drone(struct drone *drone) {
 	}
 
 	for (int i = 0; i < vector_count; i++) {
-		if (vectors[i].y < 0) {
-			vector_scores[i] += drone_scans_value;
-		}
+		struct vec2d save_pos = { drone->x + vectors[i].x, 500 };
+		vector_scores[i] += compute_weighted_value(drone_pos, vectors[i], drone_scans_value, save_pos);
 	}
 
-#ifdef DEBUG_BUILD
+#if 0
 	{
 		char buf[256] = { '{' };
 		int buf_len = 1;
