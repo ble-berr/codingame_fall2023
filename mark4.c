@@ -459,6 +459,9 @@ static int compute_weighted_value(struct vec2d drone_pos, struct vec2d drone_vec
 static void play_drone(struct drone *drone) {
 	const int light = (drone->battery == DRONE_BATTERY_MAX);
 
+	int other_drone_id = (state.my.drones[0] == ENTITY_ID(drone)) ? state.my.drones[1] : state.my.drones[0];
+	struct drone *other_drone = &state.entities[other_drone_id].drone;
+
 	struct vec2d drone_pos = { drone->x, drone->y };
 	struct vec2d candidate_vectors[] = {
 		{ 600, 0 },
@@ -494,6 +497,7 @@ static void play_drone(struct drone *drone) {
 		if (fish->type == -1 || is_scanned(drone, ent_id)) { continue; }
 
 		int fish_value = compute_fish_value(fish);
+		if (is_scanned(other_drone, ent_id)) { fish_value /= 2; }
 
 		for (int i = 0; i < vector_count; i++) {
 			struct vec2d *vec = vectors + i;
@@ -534,10 +538,7 @@ static void play_drone(struct drone *drone) {
 	}
 
 	for (int i = 0; i < vector_count; i++) {
-		int other_drone_id = (state.my.drones[0] == ENTITY_ID(drone)) ? state.my.drones[1] : state.my.drones[0];
-		struct drone *other_drone = &state.entities[other_drone_id].drone;
 		struct vec2d other_drone_pos = { other_drone->x, other_drone->y };
-
 		vector_drone_scores[i] += compute_weighted_value(drone_pos, vectors[i], -1, other_drone_pos);
 	}
 
