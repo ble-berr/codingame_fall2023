@@ -68,6 +68,8 @@ struct vec2d {
 #define MAX_ENTITIES (TOTAL_DRONE_COUNT + FISH_COUNT + MONSTER_COUNT_MAX)
 
 #define COLLISION_POINTS_PER_VECTOR (25)
+#define NB_VECTOR_ANGLES (8)
+#define NB_VECTOR_SPEEDS (1)
 
 struct fish {
 	int color;    /* [0,3] */
@@ -407,6 +409,43 @@ static int compute_weighted_value(struct vec2d drone_pos, struct vec2d drone_vec
 	return weighted_value;
 }
 
+static struct vec2d movement_vectors[NB_VECTOR_ANGLES * NB_VECTOR_SPEEDS];
+
+static void compute_movement_vectors(void) {
+	for (int speed_i = 0; speed_i < NB_VECTOR_SPEEDS; speed_i++) {
+		float speed = ceil((DRONE_TURN_MOVE_DISTANCE * (NB_VECTOR_SPEEDS - speed_i)) / (float)NB_VECTOR_SPEEDS);
+
+		for (int rot_i = 0; rot_i < NB_VECTOR_ANGLES; rot_i++) {
+			int vector_index = (speed_i * NB_VECTOR_ANGLES) + rot_i;
+			float angle_rad = ((2 * rot_i) * M_PI) / NB_VECTOR_ANGLES;
+			float rot_vx = speed * cos(angle_rad);
+			float rot_vy = speed * sin(angle_rad);
+
+			rot_vx = (rot_vx < 0) ? floorf(rot_vx) : ceilf(rot_vx);
+			rot_vy = (rot_vy < 0) ? floorf(rot_vy) : ceilf(rot_vy);
+
+			dbg(
+				"vec#%d s:%f a:(%d/%d %fdeg %frad) v:{%f,%f}\n",
+				vector_index, speed, rot_i, NB_VECTOR_ANGLES,
+				(360.0 / (double)NB_VECTOR_ANGLES) * (double)rot_i, (double)angle_rad,
+				rot_vx, rot_vy
+			);
+
+			movement_vectors[vector_index].x = (int)rot_vx;
+			movement_vectors[vector_index].y = (int)rot_vy;
+		}
+	}
+
+	{
+		char buf[256];
+		int buflen = snprintf(buf, ARRLEN(buf), "mov vecs:");
+		for (int i = 0; i < ARRLEN(movement_vectors); i++) {
+			buflen += snprintf(buf + buflen, ARRLEN(buf) - buflen, " {%d,%d}", movement_vectors[i].x, movement_vectors[i].y);
+		}
+		dbg("%s\n", buf);
+	}
+}
+
 static void play_drone(struct drone *drone) {
 	const int light = (drone->y > 2000 && (drone->battery == DRONE_BATTERY_MAX || 4 <= drone->turns_since_light));
 	if (light) {
@@ -420,26 +459,16 @@ static void play_drone(struct drone *drone) {
 
 	struct vec2d drone_pos = { drone->x, drone->y };
 	struct vec2d other_drone_pos = { other_drone->x, other_drone->y };
-	struct vec2d candidate_vectors[] = {
-		{ 600, 0 },
-		{ 425, 425},
-		{ 0, 600 },
-		{ -425, 425 },
-		{ -600, 0 },
-		{ -425, -425 },
-		{ 0, -600 },
-		{ 425, -425 },
-	};
 
 	int vector_count = 0;
-	struct vec2d vectors[ARRLEN(candidate_vectors)];
-	int vector_fish_scores[ARRLEN(candidate_vectors)] = {};
-	int vector_scan_scores[ARRLEN(candidate_vectors)] = {};
-	int vector_drone_scores[ARRLEN(candidate_vectors)] = {};
+	struct vec2d vectors[ARRLEN(movement_vectors)];
+	int vector_fish_scores[ARRLEN(movement_vectors)] = {};
+	int vector_scan_scores[ARRLEN(movement_vectors)] = {};
+	int vector_drone_scores[ARRLEN(movement_vectors)] = {};
 
-	for (int i = 0; i < ARRLEN(candidate_vectors); i++) {
-		if (!monster_collision(drone, candidate_vectors[i])) {
-			vectors[vector_count] = candidate_vectors[i];
+	for (int i = 0; i < ARRLEN(movement_vectors); i++) {
+		if (!monster_collision(drone, movement_vectors[i])) {
+			vectors[vector_count] = movement_vectors[i];
 			vector_count += 1;
 		}
 	}
@@ -591,6 +620,8 @@ int main()
 		struct fish *fish = &state.entities[id].fish;
 		scanf("%d%d", &fish->color, &fish->type);
 	}
+
+	compute_movement_vectors();
 
 	while (1) {
 		parse_round_input();
