@@ -308,13 +308,28 @@ static int compute_fish_value(struct fish *fish) {
 	int fish_id = ENTITY_ID(fish);
 
 	int fish_value = fish->type + 1;
-	int color_value = 1;
-	int type_value = 1;
 
+	int scanned_of_color = 0;
+	int scanned_of_type = 0;
 	for (int i = 0; i < state.my.scan_count; i++) {
 		struct fish *scanned_fish = &state.entities[state.my.scans[i]].fish;
-		if (scanned_fish->color == fish->color) { color_value += 1; }
-		if (scanned_fish->type == fish->type) { type_value += 1; }
+		if (scanned_fish->color == fish->color) { scanned_of_color += 1; }
+		if (scanned_fish->type == fish->type) { scanned_of_type += 1; }
+	}
+
+	int color_value;
+	switch (scanned_of_color) {
+		case 0: color_value = 1; break;
+		case 1: color_value = 1; break;
+		case 2: color_value = 3; break;
+	}
+
+	int type_value;
+	switch (scanned_of_type) {
+		case 0: type_value = 1; break;
+		case 1: type_value = 1; break;
+		case 2: type_value = 2; break;
+		case 3: type_value = 4; break;
 	}
 
 	bool foe_has_fish = false;
