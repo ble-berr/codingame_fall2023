@@ -296,8 +296,8 @@ static bool is_scanned(struct drone *drone, int fish_id) {
 }
 
 static int vec2d_distance(struct vec2d a, struct vec2d b) {
-	int x_diff = ((a.x < b.x) ? (b.x - a.x) : (a.x - b.x));
-	int y_diff = ((a.y < b.y) ? (b.y - a.y) : (a.y - b.y));
+	int x_diff = a.x - b.x;
+	int y_diff = a.y - b.y;
 
 	return sqrt((x_diff * x_diff) + (y_diff * y_diff));
 }
@@ -436,6 +436,7 @@ static void compute_movement_vectors(void) {
 		}
 	}
 
+#if 0
 	{
 		char buf[256];
 		int buflen = snprintf(buf, ARRLEN(buf), "mov vecs:");
@@ -444,6 +445,7 @@ static void compute_movement_vectors(void) {
 		}
 		dbg("%s\n", buf);
 	}
+#endif
 }
 
 static void play_drone(struct drone *drone) {
