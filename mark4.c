@@ -67,9 +67,9 @@ struct vec2d {
 /* 4 drones and 12 fish in Wood League 1. */
 #define MAX_ENTITIES (TOTAL_DRONE_COUNT + FISH_COUNT + MONSTER_COUNT_MAX)
 
-#define COLLISION_POINTS_PER_VECTOR (25)
-#define NB_VECTOR_ANGLES (8)
-#define NB_VECTOR_SPEEDS (1)
+#define COLLISION_POINTS_PER_VECTOR (10)
+#define NB_VECTOR_ANGLES (16)
+#define NB_VECTOR_SPEEDS (2)
 
 struct fish {
 	int color;    /* [0,3] */
