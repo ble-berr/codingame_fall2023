@@ -538,13 +538,14 @@ static void play_drone(struct drone *drone) {
 		vector_drone_scores[i] += compute_weighted_value(drone_pos, vectors[i], -1, other_drone_pos);
 	}
 
-#if 1
+#if 0
 	{
-		char buf[256];
+		char buf[512];
 		int buf_len;
 
 		buf_len = snprintf(buf, ARRLEN(buf), "D%ld", ENTITY_ID(drone));
 		for (int i = 0; i < vector_count; i++) {
+			assert(buf_len < ARRLEN(buf), "buffer overflow line %d\n", __LINE__);
 			buf_len += snprintf(buf + buf_len, ARRLEN(buf) - buf_len, " {%d,%d}:[%d,%d,%d]%d",
 					vectors[i].x, vectors[i].y,
 					vector_fish_scores[i], vector_scan_scores[i], vector_drone_scores[i],
